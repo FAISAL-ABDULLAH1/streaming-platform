@@ -598,8 +598,8 @@ function play(ci,qi) {
   let urlM, urlT, urlBackup;
   if (PROXY_TYPE === 'node') {
     urlM      = `${PROXY_BASE}/hls/${ch.num}/${qo.v}`;
-    urlT      = `${PROXY_BASE}/stream/${ch.num}/${qo.v}`;
-    urlBackup = urlT; // الـ proxy يتعامل مع الـ failover داخلياً
+    urlT      = `${PROXY_BASE}/hls/${ch.num}/${qo.v}`; // HLS دائماً
+    urlBackup = `${PROXY_BASE}/hls/${ch.num}/${qo.v}`;
   } else if (PROXY_TYPE === 'php') {
     urlM      = `./proxy.php?a=hls&id=${qo.xui}`;
     urlT      = `./proxy.php?a=stream&id=${qo.xui}`;
