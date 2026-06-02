@@ -1,1 +1,794 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WC2026 — منصة البث الحصري</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.7/hls.min.js"></script>
+<style>
+:root{
+  --bg:#030608;--surface:#080e14;--card:#0c1520;
+  --border:#162030;--border2:#1e3045;
+  --gold:#c9a227;--gold2:#f0c84a;--gold-dim:rgba(201,162,39,.12);
+  --red:#c0392b;--red2:#e74c3c;--green:#27ae60;--green2:#2ecc71;
+  --text:#e8edf2;--muted:#5a7a9a;--dim:#2a4060;
+  --font:'Cairo',sans-serif;--display:'Bebas Neue',sans-serif;
+  --mono:'JetBrains Mono',monospace;--r:12px;--r-lg:20px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);}
+body::before{content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(0,212,255,.02)1px,transparent 1px),
+  linear-gradient(90deg,rgba(0,212,255,.02)1px,transparent 1px);
+  background-size:50px 50px;pointer-events:none;z-index:0;}
 
+/* pages */
+.page{position:fixed;inset:0;opacity:0;pointer-events:none;transition:opacity .3s;overflow-y:auto;}
+.page.active{opacity:1;pointer-events:all;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ─── LOGIN ─── */
+#pg-login{display:flex;align-items:center;justify-content:center;min-height:100vh;}
+.bg-glow{position:fixed;inset:0;z-index:0;
+  background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(201,162,39,.08),transparent 60%),
+             radial-gradient(ellipse 50% 50% at 10% 80%,rgba(192,57,43,.05),transparent 50%);}
+.login-box{position:relative;z-index:1;width:100%;max-width:420px;margin:20px;}
+.trophy{text-align:center;margin-bottom:24px;}
+.trophy-ico{font-size:3.2rem;filter:drop-shadow(0 0 24px rgba(201,162,39,.5));
+  animation:fl 4s ease-in-out infinite;display:block;}
+@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.trophy-ttl{font-family:var(--display);font-size:2.5rem;letter-spacing:4px;
+  background:linear-gradient(135deg,var(--gold),var(--gold2),var(--gold));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-size:200%;animation:sh 3s linear infinite;}
+@keyframes sh{0%{background-position:200%}100%{background-position:-200%}}
+.trophy-sub{color:var(--muted);font-size:.78rem;letter-spacing:3px;text-transform:uppercase;margin-top:3px;}
+.login-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--r-lg);
+  padding:28px;box-shadow:0 0 0 1px rgba(201,162,39,.05),0 32px 64px rgba(0,0,0,.6),
+  inset 0 1px 0 rgba(201,162,39,.08);}
+.ltabs{display:grid;grid-template-columns:1fr 1fr;background:var(--surface);
+  border-radius:8px;padding:4px;margin-bottom:20px;gap:4px;}
+.ltab{padding:9px;border:none;border-radius:6px;font-family:var(--font);
+  font-size:.88rem;font-weight:600;cursor:pointer;transition:all .2s;
+  background:transparent;color:var(--muted);}
+.ltab.on{background:rgba(201,162,39,.15);color:var(--gold2);}
+.fld{margin-bottom:14px;}
+.fld label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:5px;font-weight:600;}
+.fld input{width:100%;padding:10px 13px;background:var(--surface);border:1px solid var(--border2);
+  border-radius:7px;color:var(--text);font-family:var(--font);font-size:.9rem;outline:none;transition:all .2s;}
+.fld input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,39,.12);}
+.btn-login{width:100%;padding:12px;background:linear-gradient(135deg,var(--gold),#a07810);
+  border:none;border-radius:8px;color:#000;font-family:var(--font);font-size:.95rem;
+  font-weight:700;cursor:pointer;transition:all .25s;margin-top:2px;}
+.btn-login:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(201,162,39,.3);}
+.lerr{background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);color:#e74c3c;
+  border-radius:6px;padding:9px 13px;font-size:.83rem;margin-bottom:12px;display:none;}
+.lhint{margin-top:12px;font-size:.7rem;color:var(--muted);text-align:center;line-height:1.8;}
+
+/* ─── TOPBAR ─── */
+.topbar{position:sticky;top:0;z-index:200;background:rgba(3,6,8,.92);
+  backdrop-filter:blur(20px);border-bottom:1px solid var(--border2);
+  padding:0 18px;display:flex;align-items:center;gap:10px;height:54px;}
+.tlogo{font-family:var(--display);font-size:1.3rem;letter-spacing:3px;
+  background:linear-gradient(135deg,var(--gold),var(--gold2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.tbadge{background:var(--gold-dim);border:1px solid rgba(201,162,39,.3);color:var(--gold);
+  font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:4px;font-family:var(--mono);}
+.tspace{flex:1;}
+.tuser{display:flex;align-items:center;gap:7px;font-size:.82rem;color:var(--muted);}
+.av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#a07810);
+  display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;color:#000;}
+.btn-out{background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.3);color:var(--red2);
+  padding:5px 11px;border-radius:5px;font-family:var(--font);font-size:.76rem;cursor:pointer;}
+.btn-out:hover{background:rgba(192,57,43,.2);}
+
+/* ─── ADMIN ─── */
+#pg-admin{background:var(--bg);}
+.inner{max-width:1100px;margin:0 auto;padding:20px 16px;}
+.sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+@media(max-width:580px){.sgrid{grid-template-columns:1fr 1fr;}}
+.scard{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 18px;position:relative;overflow:hidden;}
+.scard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.scard.g::before{background:linear-gradient(90deg,var(--gold),var(--gold2));}
+.scard.gr::before{background:linear-gradient(90deg,var(--green),var(--green2));}
+.scard.r::before{background:linear-gradient(90deg,var(--red),var(--red2));}
+.sico{font-size:1.5rem;margin-bottom:6px;}
+.sval{font-family:var(--display);font-size:1.9rem;letter-spacing:1px;line-height:1;}
+.scard.g .sval{color:var(--gold2);}.scard.gr .sval{color:var(--green2);}.scard.r .sval{color:var(--red2);}
+.slbl{color:var(--muted);font-size:.75rem;margin-top:3px;}
+.agrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:720px){.agrid{grid-template-columns:1fr;}}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;}
+.phd{padding:13px 16px;border-bottom:1px solid var(--border);font-weight:700;font-size:.9rem;
+  display:flex;align-items:center;gap:8px;}
+.pbody{padding:16px;}
+.chart-wrap{display:flex;flex-direction:column;gap:9px;}
+.crow{display:flex;align-items:center;gap:9px;}
+.clbl{width:48px;font-size:.7rem;color:var(--muted);font-family:var(--mono);}
+.ctrack{flex:1;background:var(--surface);border-radius:3px;height:20px;overflow:hidden;}
+.cfill{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:6px;
+  justify-content:flex-end;font-size:.68rem;font-weight:700;font-family:var(--mono);}
+.cfill.go{background:linear-gradient(90deg,#3a2800,var(--gold));color:#000;}
+.cfill.gn{background:linear-gradient(90deg,#0a3520,var(--green2));color:#000;}
+.cfill.bl{background:linear-gradient(90deg,#0a2040,#2980b9);color:#fff;}
+.cfill.rd{background:linear-gradient(90deg,#3b0a0a,var(--red2));color:#fff;}
+.stbl{width:100%;border-collapse:collapse;font-size:.81rem;}
+.stbl th{padding:8px 11px;text-align:right;color:var(--muted);font-size:.7rem;
+  font-weight:600;border-bottom:1px solid var(--border);font-family:var(--mono);text-transform:uppercase;}
+.stbl td{padding:8px 11px;border-bottom:1px solid rgba(22,32,48,.8);vertical-align:middle;}
+.stbl tr:hover td{background:rgba(201,162,39,.03);}
+.stbl tr:last-child td{border-bottom:none;}
+.sav{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#1a4060,#0a2040);
+  border:1px solid var(--border2);display:inline-flex;align-items:center;justify-content:center;
+  font-size:.7rem;font-weight:700;color:var(--gold);margin-left:5px;}
+.tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:.68rem;font-weight:700;font-family:var(--mono);}
+.tag-on{background:rgba(39,174,96,.15);color:var(--green2);}
+.tag-off{background:rgba(90,120,154,.1);color:var(--muted);}
+.btn{padding:6px 12px;border:none;border-radius:6px;font-family:var(--font);
+  font-size:.8rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-go{background:linear-gradient(135deg,var(--gold),#a07810);color:#000;}
+.btn-go:hover{box-shadow:0 4px 12px rgba(201,162,39,.28);transform:translateY(-1px);}
+.btn-gn{background:rgba(39,174,96,.15);border:1px solid rgba(39,174,96,.4);color:var(--green2);}
+.btn-gn:hover{background:rgba(39,174,96,.25);}
+.btn-rd{background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);color:var(--red2);}
+.btn-rd:hover{background:rgba(192,57,43,.25);}
+.btn-gh{background:transparent;border:1px solid var(--border2);color:var(--muted);}
+.btn-gh:hover{border-color:var(--gold);color:var(--gold);}
+.btn-sm{padding:4px 10px;font-size:.74rem;}
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);
+  z-index:500;display:none;align-items:center;justify-content:center;}
+.modal-ov.open{display:flex;}
+.modal{background:var(--card);border:1px solid var(--border2);border-radius:var(--r-lg);
+  padding:26px;width:100%;max-width:400px;margin:16px;
+  box-shadow:0 32px 64px rgba(0,0,0,.6);animation:fadeIn .3s ease;}
+.fsm{margin-bottom:10px;}
+.fsm label{display:block;font-size:.74rem;color:var(--muted);margin-bottom:4px;font-weight:600;}
+.fsm input{width:100%;padding:8px 11px;background:var(--surface);border:1px solid var(--border2);
+  border-radius:6px;color:var(--text);font-family:var(--font);font-size:.83rem;outline:none;transition:border-color .2s;}
+.fsm input:focus{border-color:var(--gold);}
+
+/* ─── SUBSCRIBER ─── */
+#pg-sub{background:var(--bg);}
+.sub-wrap{max-width:820px;margin:0 auto;padding:14px 13px 40px;display:flex;flex-direction:column;gap:11px;}
+
+/* control bar */
+.ctrl-bar{background:var(--card);border:1px solid var(--border2);border-radius:var(--r);
+  padding:11px 14px;display:flex;flex-direction:column;gap:9px;}
+.ctrl-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.ctrl-lbl{font-size:.7rem;font-weight:700;color:var(--muted);font-family:var(--mono);
+  white-space:nowrap;min-width:48px;}
+.ch-pills{display:flex;gap:5px;flex-wrap:wrap;}
+.ch-pill{display:flex;align-items:center;gap:5px;padding:6px 11px;border-radius:7px;
+  background:var(--surface);border:1px solid var(--border2);color:var(--muted);
+  font-family:var(--font);font-size:.8rem;font-weight:600;cursor:pointer;
+  transition:all .16s;white-space:nowrap;}
+.ch-pill:hover{border-color:var(--gold);color:var(--gold);}
+.ch-pill.on{background:rgba(201,162,39,.12);border-color:var(--gold);color:var(--gold2);
+  box-shadow:0 2px 10px rgba(201,162,39,.18);}
+.ch-num{width:17px;height:17px;border-radius:3px;background:rgba(201,162,39,.12);
+  color:var(--gold2);font-size:.64rem;font-weight:900;font-family:var(--mono);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ch-pill.on .ch-num{background:var(--gold);color:#000;}
+.q-pills{display:flex;gap:5px;flex-wrap:wrap;}
+.q-pill{display:flex;align-items:center;gap:4px;padding:6px 11px;border-radius:7px;
+  background:var(--surface);border:1px solid var(--border2);color:var(--muted);
+  font-family:var(--mono);font-size:.77rem;font-weight:700;cursor:pointer;transition:all .16s;}
+.q-pill:hover{border-color:var(--gold);color:var(--gold);}
+.q-pill.on{background:rgba(201,162,39,.13);border-color:var(--gold);color:var(--gold2);
+  box-shadow:0 2px 10px rgba(201,162,39,.2);}
+
+/* player */
+.player-card{background:var(--card);border:1px solid var(--border2);border-radius:var(--r-lg);
+  overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,.4);}
+.player-hd{padding:10px 15px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.live-badge{display:flex;align-items:center;gap:5px;background:rgba(192,57,43,.15);
+  border:1px solid rgba(192,57,43,.4);color:var(--red2);font-size:.68rem;font-weight:700;
+  padding:3px 9px;border-radius:4px;font-family:var(--mono);}
+.ldot{width:6px;height:6px;border-radius:50%;background:var(--red2);
+  animation:lp 1.2s infinite;}
+@keyframes lp{0%,100%{box-shadow:0 0 0 0 rgba(255,68,68,.5)}50%{box-shadow:0 0 0 5px rgba(255,68,68,0)}}
+.ptitle{font-weight:700;font-size:.88rem;}
+.pqbadge{background:var(--gold-dim);border:1px solid rgba(201,162,39,.3);color:var(--gold2);
+  font-size:.66rem;font-weight:700;padding:2px 7px;border-radius:4px;font-family:var(--mono);}
+.pstatus{margin-right:auto;font-size:.7rem;color:var(--muted);font-family:var(--mono);}
+.vwrap{position:relative;background:#000;width:100%;aspect-ratio:16/9;}
+#bvid{width:100%;height:100%;display:block;}
+#bov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:12px;background:rgba(0,0,0,.68);transition:background .3s;}
+.spin{width:44px;height:44px;border-radius:50%;border:3px solid rgba(201,162,39,.2);
+  border-top-color:var(--gold);animation:sp 1s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg)}}
+.play-ico{width:0;height:0;border-top:14px solid transparent;border-bottom:14px solid transparent;
+  border-left:24px solid var(--gold2);margin-right:-4px;}
+#bov-txt{font-size:.83rem;color:var(--muted);text-align:center;padding:0 16px;line-height:1.5;}
+.proxy-info{background:rgba(201,162,39,.06);border:1px solid rgba(201,162,39,.2);
+  border-radius:9px;padding:12px 14px;font-size:.79rem;color:var(--muted);line-height:1.75;}
+
+/* toast */
+.toast{position:fixed;bottom:22px;right:22px;z-index:999;background:var(--card);
+  border:1px solid var(--border2);border-radius:9px;padding:10px 16px;
+  display:flex;align-items:center;gap:9px;box-shadow:0 14px 36px rgba(0,0,0,.5);
+  transform:translateY(20px);opacity:0;transition:all .3s;pointer-events:none;}
+.toast.show{transform:none;opacity:1;}
+
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:4px;}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="pg-login" class="page active">
+  <div class="bg-glow"></div>
+  <div class="login-box">
+    <div class="trophy">
+      <span class="trophy-ico">🏆</span>
+      <div class="trophy-ttl">WORLD CUP 2026</div>
+      <div class="trophy-sub">منصة البث الحصري</div>
+    </div>
+    <div class="login-card">
+      <div class="ltabs">
+        <button class="ltab on" onclick="setRole('sub',this)">👤 مشترك</button>
+        <button class="ltab"    onclick="setRole('admin',this)">⚙️ مدير</button>
+      </div>
+      <div class="lerr" id="lerr">اسم المستخدم أو كلمة المرور غير صحيحة</div>
+      <div class="fld"><label>اسم المستخدم</label>
+        <input id="uname" type="text" placeholder="اسم المستخدم" autocomplete="off"></div>
+      <div class="fld"><label>كلمة المرور</label>
+        <input id="upass" type="password" placeholder="••••••••"
+               onkeydown="if(event.key==='Enter')login()"></div>
+      <button class="btn-login" onclick="login()">دخول ←</button>
+      <div class="lhint">
+        مشترك: <code style="color:var(--gold);font-family:var(--mono)">user / 1234</code>
+        &nbsp;|&nbsp;
+        أدمن: <code style="color:var(--gold);font-family:var(--mono)">admin / admin</code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADMIN ═══ -->
+<div id="pg-admin" class="page">
+  <div class="topbar">
+    <div class="tlogo">⚽ WC2026</div>
+    <span class="tbadge">ADMIN</span>
+    <div class="tspace"></div>
+    <div class="tuser"><div class="av">A</div><span>المدير</span></div>
+    <button class="btn-out" onclick="logout()">خروج</button>
+  </div>
+  <div class="inner">
+    <div class="sgrid">
+      <div class="scard g"><div class="sico">👥</div>
+        <div class="sval" id="st-t">5</div><div class="slbl">إجمالي المشتركين</div></div>
+      <div class="scard gr"><div class="sico">✅</div>
+        <div class="sval" id="st-a">4</div><div class="slbl">نشطون</div></div>
+      <div class="scard r"><div class="sico">⛔</div>
+        <div class="sval" id="st-i">1</div><div class="slbl">موقوفون</div></div>
+    </div>
+    <div class="agrid">
+      <div class="panel">
+        <div class="phd">📊 إحصائيات المشاهدة</div>
+        <div class="pbody">
+          <div class="chart-wrap">
+            <div class="crow"><span class="clbl">Jun 11</span>
+              <div class="ctrack"><div class="cfill go" style="width:85%">850</div></div></div>
+            <div class="crow"><span class="clbl">Jun 12</span>
+              <div class="ctrack"><div class="cfill gn" style="width:72%">720</div></div></div>
+            <div class="crow"><span class="clbl">Jun 13</span>
+              <div class="ctrack"><div class="cfill bl" style="width:63%">630</div></div></div>
+            <div class="crow"><span class="clbl">Jun 14</span>
+              <div class="ctrack"><div class="cfill rd" style="width:91%">910</div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="phd">📺 معلومات البث</div>
+        <div class="pbody" style="display:flex;flex-direction:column;gap:9px">
+          <div style="padding:9px 11px;background:var(--surface);border-radius:7px;border:1px solid var(--border);display:flex;justify-content:space-between">
+            <span style="font-size:.8rem;color:var(--muted)">القنوات</span>
+            <span style="font-family:var(--mono);color:var(--gold2);font-weight:700">beIN Max 1-6</span></div>
+          <div style="padding:9px 11px;background:var(--surface);border-radius:7px;border:1px solid var(--border);display:flex;justify-content:space-between">
+            <span style="font-size:.8rem;color:var(--muted)">الجودات</span>
+            <span style="font-family:var(--mono);color:var(--green2);font-weight:700">4K · FHD · HD · SD</span></div>
+          <div style="padding:9px 11px;background:var(--surface);border-radius:7px;border:1px solid var(--border);display:flex;justify-content:space-between">
+            <span style="font-size:.8rem;color:var(--muted)">Proxy</span>
+            <span id="proxy-mode-badge" style="font-family:var(--mono);color:var(--muted);font-weight:700">—</span></div>
+        </div>
+      </div>
+      <div class="panel" style="grid-column:1/-1">
+        <div class="phd" style="justify-content:space-between">
+          <span>👥 إدارة المشتركين</span>
+          <button class="btn btn-go btn-sm" onclick="openM()">+ إضافة</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="stbl"><thead><tr>
+            <th>المشترك</th><th>المستخدم</th><th>الاشتراك</th>
+            <th>آخر دخول</th><th>الحالة</th><th>إجراءات</th>
+          </tr></thead><tbody id="stbody"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SUBSCRIBER ═══ -->
+<div id="pg-sub" class="page">
+  <div class="topbar">
+    <div class="tlogo">⚽ WC2026</div>
+    <span class="tbadge">LIVE</span>
+    <div class="tspace"></div>
+    <div class="tuser">
+      <div class="av" id="sub-av">م</div>
+      <span id="sub-nm">مشترك</span>
+    </div>
+    <button class="btn-out" onclick="logout()">خروج</button>
+  </div>
+  <div class="sub-wrap">
+
+    <!-- control bar -->
+    <div class="ctrl-bar">
+      <div class="ctrl-row">
+        <span class="ctrl-lbl">📺 القناة</span>
+        <div class="ch-pills" id="ch-pills"></div>
+      </div>
+      <div class="ctrl-row">
+        <span class="ctrl-lbl">🎯 الجودة</span>
+        <div class="q-pills" id="q-pills"></div>
+      </div>
+    </div>
+
+    <!-- player -->
+    <div class="player-card">
+      <div class="player-hd">
+        <div class="live-badge"><div class="ldot"></div>LIVE</div>
+        <span class="ptitle"  id="pchname">beIN Max</span>
+        <span class="pqbadge" id="pqbadge">—</span>
+        <span class="pstatus" id="pstatus">اختر قناة</span>
+      </div>
+      <div class="vwrap">
+        <video id="bvid" controls playsinline style="width:100%;height:100%;display:block"></video>
+        <div id="bov" onclick="retry()">
+          <div id="bov-ico"><div class="play-ico"></div></div>
+          <div id="bov-txt">اختر قناة وجودة للبدء</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- proxy info box (shown when needed) -->
+    <div class="proxy-info" id="pinfo" style="display:none"></div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-ov" id="modal">
+  <div class="modal">
+    <h2 style="font-size:1.05rem;margin-bottom:16px">➕ إضافة مشترك</h2>
+    <div class="fsm"><label>الاسم</label><input id="mn" type="text" placeholder="محمد أحمد"></div>
+    <div class="fsm"><label>المستخدم</label><input id="mu" type="text" placeholder="user2026"></div>
+    <div class="fsm"><label>كلمة المرور</label><input id="mp" type="text" placeholder="••••••••"></div>
+    <div style="display:flex;gap:7px;justify-content:flex-end;margin-top:16px">
+      <button class="btn btn-gh" onclick="closeM()">إلغاء</button>
+      <button class="btn btn-go" onclick="addSub()">إضافة ✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span id="t-msg" style="font-size:.83rem"></span>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   PROXY — Relative Paths (يعمل على أي دومين)
+══════════════════════════════════════════════ */
+
+// بيانات IPTV مدمجة
+const XC = { h:'http://barqtv.live', u:'A4076193855', p:'5244735714' };
+
+/*
+ * اكتشاف الـ Proxy تلقائياً:
+ *   1. إذا وُجد proxy.js  → يستخدم  /hls/:id     (Node)
+ *   2. إذا وُجد proxy.php → يستخدم  proxy.php?a=hls&id=:id
+ *   3. HTTP بدون proxy    → اتصال مباشر بـ Xtream
+ *
+ * لا يحتاج أي تعديل — يكتشف البيئة تلقائياً
+ */
+let PROXY_TYPE = 'none';   // 'node' | 'php' | 'none'
+let PROXY_BASE = '';       // رابط الـ proxy
+
+async function detectProxy() {
+  // Render Proxy — جاهز مباشرة
+  PROXY_TYPE = 'node';
+  PROXY_BASE = 'https://streaming-platform-84k9.onrender.com';
+}
+
+// بناء روابط البث بحسب نوع الـ Proxy
+function buildM3U8(id) {
+  if (PROXY_TYPE === 'node') return `${PROXY_BASE}/hls/${id}`;
+  if (PROXY_TYPE === 'php')  return `${PROXY_BASE}?a=hls&id=${id}`;
+  return `${XC.h}/live/${XC.u}/${XC.p}/${id}.m3u8`;
+}
+
+function buildTS(id) {
+  if (PROXY_TYPE === 'node') return `${PROXY_BASE}/stream/${id}`;
+  if (PROXY_TYPE === 'php')  return `${PROXY_BASE}?a=stream&id=${id}`;
+  return `${XC.h}/live/${XC.u}/${XC.p}/${id}.ts`;
+}
+
+/* ══════════════════════════════════════════════
+   CHANNELS — بيانات حقيقية من M3U
+   Primary [F] + Backup [N] لكل قناة وجودة
+══════════════════════════════════════════════ */
+const CH = [
+  { num:1, name:'beIN Sports 1', logo:'http://91.218.50.167:8080/icons/bein/F/FHD-1.png', q:[
+    {v:'4K', xui:'393670', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8FJZOcLkl0der47QYxvyEMjEmHZi6gjxJIz-5T7wbSU5/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7pfjwl27hM6Pctp5EfVWwOnX/ts'},
+    {v:'FHD',xui:'393701', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgAQgH1iI-B8Et2LBBtHdPh87/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgAQk2vaEb_5AHWCV16ZeTbCs/ts'},
+    {v:'HD', xui:'393729', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgARE-dQmZyLn4FsiNJdygyWp/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7pcZGefxarfDDhB2xr6A1FJL/ts'},
+    {v:'SD', xui:'393756', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgATwh7PNLI7BhzqByS9zEslt/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7pcV0tSfzOM7iRRh43qZS_BY/ts'},
+  ]},
+  { num:2, name:'beIN Sports 2', logo:'http://91.218.50.167:8080/icons/bein/F/FHD-2.png', q:[
+    {v:'4K', xui:'393672', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8FJZOcLkl0der47QYxvyEMgHiTT7gZRrCENPok5oimbJ/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7pcmyI_F9n8EhtxBq7cCktUC/ts'},
+    {v:'FHD',xui:'393703', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgATsDAeA6eA5XyBX0CMLbKat/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgARLrZbkQMfDIxCdHSDsonfm/ts'},
+    {v:'HD', xui:'393731', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgAREXgFv9FRrKtS0glc5nm2t/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7peBYJr1-TYjBABPs55Ehjl-/ts'},
+    {v:'SD', xui:'393758', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgAToH2JYfSBOzrjHW1mjXuaK/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7peCK7U4w3NMAHvvU1uDwMai/ts'},
+  ]},
+  { num:3, name:'beIN Sports 3', logo:'http://91.218.50.167:8080/icons/bein/F/FHD-3.png', q:[
+    {v:'4K', xui:'393674', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8FJZOcLkl0der47QYxvyEMjf2wRwNay8mRZ31GUleP5F/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7pcLJ2b6jwERnUpR9V6B17Lm/ts'},
+    {v:'FHD',xui:'393705', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgASLx_TR2mIzrRx-dyoloOBi/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgARU3OiEQfhu78N9kCEhY1Ht/ts'},
+    {v:'HD', xui:'393733', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgASEL4FeD7KDUJglMiq-DwDp/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7pe4OQt-Cwi2y2YRULvQrNhZ/ts'},
+    {v:'SD', xui:'393760', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgASsAWtsJ7coBdR9Oh0mfnyZ/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7pczhw_Q-ZRyUUj7wqgjBjfL/ts'},
+  ]},
+  { num:4, name:'beIN Sports 4', logo:'http://91.218.50.167:8080/icons/bein/F/FHD-4.png', q:[
+    {v:'4K', xui:'393676', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8FJZOcLkl0der47QYxvyEMjD6CMoP343rI5T4yYaN4LM/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7peL_QIUg2T0VsGXjBlEYZQ_/ts'},
+    {v:'FHD',xui:'393707', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgATCm0FhKv5I2n64kA4Li--b/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgASUYamwrMYs3Hs5b6gdAYT6/ts'},
+    {v:'HD', xui:'393735', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgATbOQzv2k__pBo94LcXyKlR/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7pclcu8ZGXrRO_aG0T43uqAJ/ts'},
+    {v:'SD', xui:'393762', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgAQnv_QLvor4Mb5hz3R0Tcfu/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7pe7wr7YyUM9R-p2NHHiKWrq/ts'},
+  ]},
+  { num:5, name:'beIN Sports 5', logo:'http://91.218.50.167:8080/icons/bein/F/FHD-5.png', q:[
+    {v:'4K', xui:'393678', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8FJZOcLkl0der47QYxvyEMiUz9zOMBokMoKf8Jn0h7LS/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7pfIqSAq7xuOQ5hRFHnQrCCV/ts'},
+    {v:'FHD',xui:'393709', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgASBa_9s84dvOS6zdfFR2H7p/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgAR-dcb53lT0frpMHVSjrazk/ts'},
+    {v:'HD', xui:'393737', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgASXbBV4Ut5anOUu3GKgwuxc/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7peZz-VinPTnK2hdmhERLWhh/ts'},
+    {v:'SD', xui:'393764', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgARXKXx6F1U1c_072izwR2N9/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7pc5KXZIayL1o1LKbyD77PgM/ts'},
+  ]},
+  { num:6, name:'beIN Sports 6', logo:'http://91.218.50.167:8080/icons/bein/F/FHD-6.png', q:[
+    {v:'4K', xui:'393680', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8FJZOcLkl0der47QYxvyEMjZIK6t5N1T9DRr38tlxn7C/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7pfwXEf50KWc43fjtH5-Jqve/ts'},
+    {v:'FHD',xui:'393711', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgARbN21fZyXEUfkVCPxKQEk0/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgATa6J6w62rNhT_8wS_nbjS1/ts'},
+    {v:'HD', xui:'393739', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgAT6Yj7b6nZrIR062S5rfL_1/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7petzpnX5IaTZJW5B-tGREos/ts'},
+    {v:'SD', xui:'393766', p:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8J2dOgNva7sXGe0lzeZUgATVOSrj9a3Ug_FSXi65EpFU/ts', b:'http://barq-tv.site:80/play/EGwSGNTitwhW38-0vrcO8DpOOM8VOXwspwZJSlwt7peiP-GFY6kogL-I5HrrNMO0/ts'},
+  ]},
+];
+
+/* ══════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════ */
+let role    = 'sub';
+let aCh     = 0;
+let aQi     = 1;   // FHD default
+let hls     = null;
+let tTimer  = null;
+
+let subs = [
+  {id:1,name:'أحمد محمد',   user:'user',  pass:'1234', joined:'2026-01-10',last:'منذ لحظات',on:true},
+  {id:2,name:'فيصل العمري',user:'faisal',pass:'pass1',joined:'2026-02-14',last:'قبل ساعة',on:true},
+  {id:3,name:'نورة السالم',user:'noura', pass:'pass2',joined:'2026-03-01',last:'أمس',on:true},
+  {id:4,name:'خالد الزهراني',user:'khalid',pass:'pass3',joined:'2026-03-20',last:'قبل يومين',on:false},
+  {id:5,name:'سارة المطيري',user:'sara',  pass:'pass4',joined:'2026-04-05',last:'قبل أسبوع',on:true},
+];
+
+/* ══════════════════════════════════════════════
+   LOGIN
+══════════════════════════════════════════════ */
+function setRole(r,btn) {
+  role=r;
+  document.querySelectorAll('.ltab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+function login() {
+  const u=document.getElementById('uname').value.trim();
+  const p=document.getElementById('upass').value.trim();
+  const err=document.getElementById('lerr');
+  err.style.display='none';
+
+  if(u==='admin'&&p==='admin'){
+    showPage('admin');
+    renderSubs();
+    updateProxyBadge();
+    return;
+  }
+  const s=subs.find(x=>x.user===u&&x.pass===p);
+  if(s){
+    if(!s.on){err.textContent='حسابك موقوف.';err.style.display='block';return;}
+    s.last='منذ لحظات';
+    document.getElementById('sub-av').textContent=s.name[0];
+    document.getElementById('sub-nm').textContent=s.name;
+    showPage('sub');
+    initSubPage();
+    return;
+  }
+  err.textContent='اسم المستخدم أو كلمة المرور غير صحيحة';
+  err.style.display='block';
+}
+
+function logout() {
+  killPlayer();
+  showPage('login');
+  document.getElementById('uname').value='';
+  document.getElementById('upass').value='';
+}
+
+function showPage(n) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pg-'+n).classList.add('active');
+}
+
+/* ══════════════════════════════════════════════
+   SUBSCRIBER
+══════════════════════════════════════════════ */
+async function initSubPage() {
+  buildChPills();
+  await detectProxy();
+  selectCh(0);
+}
+
+function buildChPills() {
+  const wrap=document.getElementById('ch-pills');
+  wrap.innerHTML='';
+  CH.forEach((ch,i)=>{
+    const b=document.createElement('button');
+    b.className='ch-pill'+(i===0?' on':'');
+    b.dataset.i=i;
+    b.innerHTML=`<span class="ch-num">${i+1}</span>${ch.name}`;
+    b.onclick=()=>selectCh(i);
+    wrap.appendChild(b);
+  });
+}
+
+function selectCh(i) {
+  aCh=i;
+  document.querySelectorAll('.ch-pill').forEach(b=>b.classList.remove('on'));
+  document.querySelector(`.ch-pill[data-i="${i}"]`).classList.add('on');
+  document.getElementById('pchname').textContent=CH[i].name;
+  buildQPills(i);
+}
+
+function buildQPills(ci) {
+  const qs=CH[ci].q;
+  const wrap=document.getElementById('q-pills');
+  wrap.innerHTML='';
+  const ICO={'4K':'💎','FHD':'🔷','HD':'🔹','SD':'⚪'};
+  const di=qs.findIndex(q=>q.v==='FHD');
+  const def=di>=0?di:0;
+  aQi=def;
+  qs.forEach((qo,qi)=>{
+    const b=document.createElement('button');
+    b.className='q-pill'+(qi===def?' on':'');
+    b.dataset.qi=qi;
+    b.innerHTML=`${ICO[qo.v]||''}${qo.v}`;
+    b.onclick=()=>selQ(qi);
+    wrap.appendChild(b);
+  });
+  play(ci,def);
+}
+
+function selQ(qi) {
+  aQi=qi;
+  document.querySelectorAll('.q-pill').forEach(b=>b.classList.remove('on'));
+  document.querySelector(`.q-pill[data-qi="${qi}"]`).classList.add('on');
+  play(aCh,qi);
+}
+
+/* ══════════════════════════════════════════════
+   PLAYER
+══════════════════════════════════════════════ */
+function play(ci,qi) {
+  const ch  = CH[ci];
+  const qo  = ch.q[qi];
+
+  // ── روابط ذكية حسب البيئة ──────────────────────
+  // Proxy: /stream/:chNum/:quality  → Server-side failover تلقائي
+  // HTTP مباشر: Primary → Backup → Xtream API (client failover)
+  let urlM, urlT, urlBackup;
+  if (PROXY_TYPE === 'node') {
+    urlM      = `${PROXY_BASE}/hls/${ch.num}/${qo.v}`;
+    urlT      = `${PROXY_BASE}/stream/${ch.num}/${qo.v}`;
+    urlBackup = urlT; // الـ proxy يتعامل مع الـ failover داخلياً
+  } else if (PROXY_TYPE === 'php') {
+    urlM      = `./proxy.php?a=hls&id=${qo.xui}`;
+    urlT      = `./proxy.php?a=stream&id=${qo.xui}`;
+    urlBackup = urlT;
+  } else {
+    // مباشر — Primary أولاً ثم Backup ثم Xtream
+    urlM      = `${XC.h}/live/${XC.u}/${XC.p}/${qo.xui}.m3u8`;
+    urlT      = qo.p;   // Primary URL
+    urlBackup = qo.b;   // Backup URL
+  }
+
+  document.getElementById('pchname').textContent = ch.name;
+  document.getElementById('pqbadge').textContent = qo.v;
+  document.getElementById('pinfo').style.display = 'none';
+
+  const vid = document.getElementById('bvid');
+  const ov  = document.getElementById('bov');
+  const ico = document.getElementById('bov-ico');
+  const txt = document.getElementById('bov-txt');
+  const st  = document.getElementById('pstatus');
+
+  // spinner
+  ov.style.display='flex'; ov.style.cursor='default';
+  ico.innerHTML='<div class="spin"></div>';
+  txt.textContent=`جاري تحميل ${ch.name} — ${qo.v}...`;
+  st.textContent='⏳'; st.style.color='var(--muted)';
+
+  killPlayer();
+
+  // إذا لا يوجد Proxy وصفحة HTTPS → أرشد المستخدم
+  if(PROXY_TYPE==='none' && location.protocol==='https:') {
+    ico.innerHTML='<div style="font-size:1.6rem">⚠️</div>';
+    txt.textContent='يحتاج Proxy';
+    st.textContent='⛔ HTTP على HTTPS'; st.style.color='var(--red2)';
+    const pi=document.getElementById('pinfo');
+    pi.style.display='block';
+    pi.innerHTML=`
+      <strong style="color:var(--gold2)">لتشغيل البث:</strong><br>
+      ضع <code style="color:var(--gold)">proxy.js</code> أو <code style="color:var(--gold)">proxy.php</code>
+      في نفس مجلد الملف، ثم أعد التحميل.<br><br>
+      <a href="${urlT}" target="_blank"
+         style="display:inline-block;margin-top:4px;padding:5px 13px;background:var(--gold);
+                color:#000;border-radius:6px;font-weight:700;font-size:.78rem;text-decoration:none">
+        ▶ فتح البث في تبويب جديد
+      </a>`;
+    return;
+  }
+
+  const onOk=()=>{
+    ov.style.display='none';
+    st.textContent='🔴 بث مباشر'; st.style.color='var(--green2)';
+    vid.muted=false;
+    vid.play().catch(()=>{vid.muted=true;vid.play().catch(()=>{});});
+  };
+
+  const onErr=(m)=>{
+    ico.innerHTML='<div class="play-ico"></div>';
+    ov.style.cursor='pointer';
+    txt.textContent=m||'▶ اضغط للمحاولة';
+    st.textContent='⚠️ تعذّر'; st.style.color='var(--red2)';
+  };
+
+  if(typeof Hls!=='undefined'&&Hls.isSupported()){
+    hls=new Hls({lowLatencyMode:true,maxBufferLength:20});
+    hls.loadSource(urlM);
+    hls.attachMedia(vid);
+    hls.on(Hls.Events.MANIFEST_PARSED,onOk);
+    hls.on(Hls.Events.ERROR,(_,d)=>{
+      if(!d.fatal)return;
+      hls.destroy();hls=null;
+      // Client Failover: Primary → Backup → Xtream مباشر
+      const fb = (urlBackup && urlBackup!==urlT) ? urlBackup
+               : `${XC.h}/live/${XC.u}/${XC.p}/${qo.xui}.ts`;
+      console.warn('[Failover]', urlT!==urlM ? 'direct→backup' : 'proxy→xtream');
+      vid.src=fb;vid.load();
+      vid.addEventListener('canplay',onOk,{once:true});
+      vid.addEventListener('error',()=>onErr(),{once:true});
+    });
+  } else if(vid.canPlayType('application/vnd.apple.mpegurl')){
+    vid.src=urlM;
+    vid.addEventListener('loadedmetadata',onOk,{once:true});
+    vid.addEventListener('error',()=>{
+      const fb=(urlBackup&&urlBackup!==urlT)?urlBackup:urlT;
+      vid.src=fb;vid.load();
+      vid.addEventListener('canplay',onOk,{once:true});
+    },{once:true});
+  } else {
+    vid.src=urlT;vid.load();
+    vid.addEventListener('canplay',onOk,{once:true});
+    vid.addEventListener('error',()=>{
+      if(urlBackup&&urlBackup!==urlT){
+        vid.src=urlBackup;vid.load();
+        vid.addEventListener('canplay',onOk,{once:true});
+      } else onErr();
+    },{once:true});
+  }
+}
+
+function retry(){if(aCh!==null)play(aCh,aQi);}
+
+function killPlayer(){
+  if(hls){try{hls.destroy();}catch(e){}hls=null;}
+  const v=document.getElementById('bvid');
+  if(v){v.pause();v.removeAttribute('src');v.load();}
+}
+
+/* ══════════════════════════════════════════════
+   ADMIN
+══════════════════════════════════════════════ */
+function updateProxyBadge() {
+  const badge = document.getElementById('proxy-mode-badge');
+  if (!badge) return;
+  if (PROXY_TYPE==='node') { badge.textContent='Node.js ✓'; badge.style.color='var(--green2)'; }
+  else if (PROXY_TYPE==='php') { badge.textContent='PHP ✓'; badge.style.color='var(--green2)'; }
+  else { badge.textContent='لا يوجد'; badge.style.color='var(--red2)'; }
+}
+
+function renderSubs() {
+  const tb=document.getElementById('stbody');
+  tb.innerHTML='';
+  const tot=subs.length;
+  const act=subs.filter(s=>s.on).length;
+  document.getElementById('st-t').textContent=tot;
+  document.getElementById('st-a').textContent=act;
+  document.getElementById('st-i').textContent=tot-act;
+
+  subs.forEach(s=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td><span class="sav">${s.name[0]}</span>${s.name}</td>
+      <td style="font-family:var(--mono);color:var(--gold);font-size:.78rem">${s.user}</td>
+      <td style="color:var(--muted);font-size:.76rem">${s.joined}</td>
+      <td style="color:var(--muted);font-size:.76rem">${s.last}</td>
+      <td><span class="tag ${s.on?'tag-on':'tag-off'}">${s.on?'نشط':'موقوف'}</span></td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
+        <button class="btn btn-sm ${s.on?'btn-rd':'btn-gn'}" onclick="toggle(${s.id})">${s.on?'⏸ إيقاف':'▶ تفعيل'}</button>
+        <button class="btn btn-sm btn-gh" onclick="del(${s.id},'${s.name.replace(/'/g,"\\'")}')">🗑 حذف</button>
+      </td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function toggle(id){
+  const s=subs.find(x=>x.id===id);if(!s)return;
+  s.on=!s.on;renderSubs();
+  toast(s.on?`✅ تم تفعيل ${s.name}`:`⛔ تم إيقاف ${s.name}`);
+}
+
+function del(id,name){
+  if(!confirm(`حذف "${name}" نهائياً؟`))return;
+  subs=subs.filter(x=>x.id!==id);renderSubs();
+  toast(`🗑 تم حذف ${name}`);
+}
+
+function openM(){document.getElementById('modal').classList.add('open');}
+function closeM(){document.getElementById('modal').classList.remove('open');}
+
+function addSub(){
+  const n=document.getElementById('mn').value.trim();
+  const u=document.getElementById('mu').value.trim();
+  const p=document.getElementById('mp').value.trim();
+  if(!n||!u||!p){toast('⚠️ أكمل جميع الحقول');return;}
+  if(subs.find(s=>s.user===u)){toast('⚠️ اسم المستخدم مستخدم');return;}
+  const id=Math.max(...subs.map(s=>s.id),0)+1;
+  subs.push({id,name:n,user:u,pass:p,joined:new Date().toISOString().slice(0,10),last:'الآن',on:true});
+  renderSubs();closeM();
+  ['mn','mu','mp'].forEach(i=>document.getElementById(i).value='');
+  toast(`✅ تمت إضافة ${n}`);
+}
+
+/* ══════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════ */
+function toast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('t-msg').textContent=msg;
+  t.classList.add('show');clearTimeout(tTimer);
+  tTimer=setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+/* ══════════════════════════════════════════════
+   EVENTS
+══════════════════════════════════════════════ */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('pg-login').classList.contains('active'))login();
+});
+document.getElementById('modal').addEventListener('click',function(e){
+  if(e.target===this)closeM();
+});
+</script>
+</body>
+</html>
